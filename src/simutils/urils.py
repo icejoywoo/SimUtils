@@ -4,6 +4,7 @@
 
 __author__ = 'wujiabin'
 
+import itertools
 import threading
 import time
 

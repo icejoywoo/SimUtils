@@ -4,8 +4,6 @@
 
 __author__ = 'wujiabin'
 
-import itertools
-
 
 def limited_once(func):
     """
