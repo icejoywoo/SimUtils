@@ -5,3 +5,6 @@
 __author__ = 'wujiabin'
 
 __all__ = ('thirdparty', 'decorators')
+
+from thirdparty import *
+from decorators import *
