@@ -4,7 +4,6 @@
 
 __author__ = 'wujiabin'
 
-import datetime
 import itertools
 import re
 import threading
@@ -142,8 +141,50 @@ class Storage(dict):
 storage = Storage
 
 
-###### utility functions ######
+class threadlocal(object):
+    """Implementation of threading.local for python2.3.
+    COPY FROM WEB.PY
+    """
+    def __getattribute__(self, name):
+        if name == "__dict__":
+            return threadlocal._getd(self)
+        else:
+            try:
+                return object.__getattribute__(self, name)
+            except AttributeError:
+                try:
+                    return self.__dict__[name]
+                except KeyError:
+                    raise AttributeError, name
 
+    def __setattr__(self, name, value):
+        self.__dict__[name] = value
+
+    def __delattr__(self, name):
+        try:
+            del self.__dict__[name]
+        except KeyError:
+            raise AttributeError, name
+
+    def _getd(self):
+        t = threading.currentThread()
+        if not hasattr(t, '_d'):
+            # using __dict__ of thread as thread local storage
+            t._d = {}
+
+        _id = id(self)
+        # there could be multiple instances of threadlocal.
+        # use id(self) as key
+        if _id not in t._d:
+            t._d[_id] = {}
+        return t._d[_id]
+
+# alias
+thread_local_storage = threadlocal
+ThreadLocalStorage = thread_local_storage
+
+
+###### utility functions ######
 def safeunicode(obj, encoding='utf-8'):
     r"""s
     Converts any given object to unicode string.
@@ -262,3 +303,10 @@ def websafe(val):
         val = unicode(val)
 
     return htmlquote(val)
+
+
+if __name__ == '__main__':
+    d = threadlocal()
+    d.x = 1
+    print d.__dict__
+    print d.x
