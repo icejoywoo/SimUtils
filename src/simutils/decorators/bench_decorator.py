@@ -148,6 +148,7 @@ if __name__ == "__main__":
 
 
     # worker_num = 1 时, 计算性能已经很不错了, 如果io比较多的情况下, 可以增加线程数
+    # 因为GIL, 多线程无法使用多核
     config = {
         "worker_num": 1,
         "time": 20,
