@@ -45,7 +45,7 @@ import re
 from UserDict import DictMixin
 import warnings
 
-from simutils.utils import storage, safeunicode, safestr, re_compile, config, websafe
+from simutils.utils import storage, safeunicode, safestr, re_compile, websafe
 
 def splitline(text):
     r"""
@@ -954,9 +954,6 @@ class Render:
     def __init__(self, loc='templates', cache=None, base=None, **keywords):
         self._loc = loc
         self._keywords = keywords
-
-        if cache is None:
-            cache = not config.get('debug', False)
 
         if cache:
             self._cache = {}
