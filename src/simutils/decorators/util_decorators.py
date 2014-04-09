@@ -59,7 +59,8 @@ class Worker(threading.Thread):
 class WorkerPool(object):
     """
     A simple method pool which can run in multi-thread and cache the result.
-    Result is not a thread-safe dict.
+    Result is not a thread-safe dict, but some operations are atomic in CPython.
+    http://effbot.org/pyfaq/what-kinds-of-global-value-mutation-are-thread-safe.htm
     """
 
     def __init__(self, threadnum=5):
@@ -103,6 +104,7 @@ class WorkerPool(object):
                 return self.result[key]
             self.result.setdefault(key, None)
             self.queue.put((key, lambda: func(*args, **kwargs)))
+            # wait for the result
             while self.result[key] is None:
                 pass
             return self.result[key]
@@ -119,10 +121,13 @@ if __name__ == "__main__":
     with WorkerPool(5) as p:
         @p.run_with
         def foo(a):
+            import time
+            time.sleep(a)
             print 'foo>', thread.get_ident(), '>', a
             return a
 
         for i in xrange(10):
             print foo(i)
 
+        # cached ret
         print foo(1)
