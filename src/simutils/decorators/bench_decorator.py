@@ -6,31 +6,21 @@ __author__ = 'wujiabin'
 
 import collections
 import Queue
-import signal
 import threading
 import time
 
+# 是否运行的标记
 is_running = True
 
 
-def signal_handler(signum, frame):
-    """
-    接收两种信号后退出,SIGINT + SIGTERM
-    """
-    global is_running
-    is_running = False
-    return
+# replace: Record = collections.namedtuple('Record', 'time latency ret')
+class Record(object):
+    __slots__ = ('time', 'latency', 'ret')
 
-
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
-try:
-    # ignore signal SIGPIPE, not available on windows
-    signal.signal(signal.SIGPIPE, signal.SIG_IGN)
-except:
-    pass
-
-Record = collections.namedtuple('Record', 'time latency ret')
+    def __init__(self, time, latency, ret):
+        self.time = time
+        self.latency = latency
+        self.ret = ret
 
 
 class Benchmark(object):

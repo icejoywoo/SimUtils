@@ -5,3 +5,5 @@
 __author__ = 'wujiabin'
 
 from func_decorators import func
+from util_decorators import WorkerPool, Timer
+from bench_decorator import Benchmark, worker

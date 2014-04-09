@@ -6,6 +6,7 @@ __author__ = 'wujiabin'
 
 __all__ = ('thirdparty', 'decorators', 'utils')
 
-from utils import *
-from thirdparty import *
-from decorators import *
+import utils
+import thirdparty
+import decorators
+import template

@@ -4,7 +4,7 @@
 
 __author__ = 'wujiabin'
 
-from simutils import func
+from simutils.decorators import func
 
 
 @func.lru_cached_ret(3, 1)
