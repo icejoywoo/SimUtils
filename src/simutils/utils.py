@@ -72,6 +72,7 @@ class Memoize:
         key = (args, tuple(keywords.items()))
         if not self.running.get(key):
             self.running[key] = threading.Lock()
+
         def update(block=False):
             if self.running[key].acquire(block):
                 try:
