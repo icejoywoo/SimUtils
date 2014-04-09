@@ -4,3 +4,4 @@
 
 __author__ = 'wujiabin'
 
+from func_decorators import func

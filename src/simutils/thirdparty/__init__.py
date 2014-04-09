@@ -4,7 +4,6 @@
 
 __author__ = 'wujiabin'
 
-__all__ = ('lru_cache_function', 'docopt')
+__all__ = ('docopt', )
 
-from lru import lru_cache_function
 from docopt import docopt
