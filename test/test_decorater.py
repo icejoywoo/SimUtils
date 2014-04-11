@@ -7,7 +7,7 @@ __author__ = 'wujiabin'
 from simutils.decorators import func
 
 
-@func.lru_cached_ret(3, 1)
+@func.ret_cached
 def f(x):
     print "Calling f(" + str(x) + ")"
     return x
@@ -17,9 +17,4 @@ print f(1)
 print f(2)
 print f(3)
 print f(4)
-print f(1)
-
-# lru test
-import time
-time.sleep(2)
 print f(1)

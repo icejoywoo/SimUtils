@@ -45,7 +45,11 @@ import re
 from UserDict import DictMixin
 import warnings
 
-from simutils.utils import storage, safeunicode, safestr, re_compile, websafe
+from simutils.decorators import func
+from simutils.utils import storage, safeunicode, safestr, websafe
+
+re_compile = func.ret_cached(re.compile)
+
 
 def splitline(text):
     r"""
