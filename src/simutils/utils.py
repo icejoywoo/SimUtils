@@ -18,7 +18,7 @@ class Storage(dict):
         >>> o.a
         1
         >>> o['a']
-        1
+        1j
         >>> o.a = 2
         >>> o['a']
         2
