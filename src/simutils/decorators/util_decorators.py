@@ -84,12 +84,6 @@ class WorkerPool(object):
         except:
             pass
 
-    def __call__(self, func):
-        if not self.is_join:
-            self.queue.put(func)
-        else:
-            raise WorkerPoolError("WorkerPool has been joined and cannot add new worker")
-
     def join(self):
         self.is_join = True
         self.queue.join()
@@ -97,6 +91,9 @@ class WorkerPool(object):
         return
 
     def run_with(self, func):
+        if self.is_join:
+            raise WorkerPoolError("WorkerPool has been joined and cannot add new worker")
+
         def _func(*args, **kwargs):
             key = (func.__name__, args, tuple(kwargs.items()))
             # cached result
@@ -122,7 +119,7 @@ if __name__ == "__main__":
         @p.run_with
         def foo(a):
             import time
-            time.sleep(a)
+            time.sleep(a * 0.2)
             print 'foo>', thread.get_ident(), '>', a
             return a
 
@@ -130,4 +127,5 @@ if __name__ == "__main__":
             print foo(i)
 
         # cached ret
-        print foo(1)
+        for i in xrange(10):
+            print foo(i)
