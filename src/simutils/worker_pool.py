@@ -12,6 +12,8 @@ __author__ = 'wujiabin'
 import threading
 import Queue
 
+from simutils import utils
+
 
 class WorkerPoolError(Exception):
     pass
@@ -52,6 +54,30 @@ class Worker(threading.Thread):
             self.queue.task_done()
 
 
+class FutureResult(object):
+
+    def __init__(self, p_status, func_id, worker_pool):
+        self._pool_status = p_status
+        self._status = p_status[func_id]
+        self._func_id = func_id
+        self.worker_pool = worker_pool
+        self._is_finished = False
+
+    def ready(self):
+        result = self._status['status'] == 'done'
+        if result:
+            self._status = self._pool_status.pop(self._func_id)
+            self.worker_pool._update_cache(self._func_id, self._status['ret'])
+            self._is_finished = True
+        return result
+
+    def result(self):
+        if self._is_finished:
+            return self._status['ret']
+        else:
+            raise ResultNotReadyException("Result is *NOT* ready.")
+
+
 class WorkerPool(object):
     """
     A simple method pool which can run in multi-thread and cache the result.
@@ -59,11 +85,12 @@ class WorkerPool(object):
     http://effbot.org/pyfaq/what-kinds-of-global-value-mutation-are-thread-safe.htm
     """
 
-    def __init__(self, thread_num=5, cache_result=False, async=True):
+    def __init__(self, thread_num=5, cache_result=False, cache_size=100, async=True):
         """
         :param thread_num: worker的数目
-        :param max_size: status的大小, 超过可能会导致异常的
+        :param cache_size: 指定cache的大小
         :param cache_result: 是否cache方法返回的结果.
+        :param async: 是同步返回还是异步返回, 默认异步, 同步没有任何优势, 异步才有优势
         :return: None
         """
         self.thread_num = thread_num
@@ -72,7 +99,10 @@ class WorkerPool(object):
         self.status = {}
         self.async = async
 
+        # 是否缓存结果, 缓存一定量的结果, 防止占用过多内存
         self.cache_result = cache_result
+        if self.cache_result:
+            self.cache = utils.LimitedSizeDict(size_limit=cache_size)
 
         self.workers = [Worker(self.queue, self.status) for _ in xrange(self.thread_num)]
         self.is_join = False
@@ -96,6 +126,13 @@ class WorkerPool(object):
         self.is_join = False
         return
 
+    def _update_cache(self, func_id, func_ret):
+        if self.cache_result:
+            self.cache[func_id] = func_ret
+
+    def _get_cache(self, func_id):
+        return self.cache.get(func_id, None)
+
     def run_with(self, func):
         """
         A function decorator, to let the method to run in parallel.
@@ -106,25 +143,6 @@ class WorkerPool(object):
         if self.is_join:
             raise WorkerPoolError("WorkerPool has been joined and cannot add new worker")
 
-        class FutureResult(object):
-
-            def __init__(self, p_status, func_id):
-                self._pool_status = p_status
-                self._status = p_status[func_id]
-                self._func_id = func_id
-
-            def ready(self):
-                result = self._status['status'] == 'done'
-                if result:
-                    self._status = self._pool_status.pop(self._func_id)
-                return result
-
-            def result(self):
-                if self.ready():
-                    return self._status['ret']
-                else:
-                    raise ResultNotReadyException("Result is *NOT* ready.")
-
         def _func(*args, **kwargs):
             """
             function wrapper: make it as a function without args
@@ -133,20 +151,26 @@ class WorkerPool(object):
             :return:
             """
             if self.cache_result:
-                key = (func.__name__, args, tuple(kwargs.items()))
+                # 相同参数的调用, 会出现相同的func_id, 这样才能缓存结果
+                func_id = (func.__name__, args, tuple(kwargs.items()))
+                cache_ret = self._get_cache(func_id)
+                if cache_ret:
+                    return cache_ret
             else:
                 import time
-                key = (func.__name__, args, tuple(kwargs.items()), time.time(), self.counter)
+                # 引入时间和counter, 不希望func_id出现重复
+                func_id = (func.__name__, args, tuple(kwargs.items()), time.time(), self.counter)
             self.counter += 1
-            self.status.setdefault(key, {'status': 'ready'})
-            self.queue.put((key, lambda: func(*args, **kwargs)))
+            self.status.setdefault(func_id, {'status': 'ready'})
+            self.queue.put((func_id, lambda: func(*args, **kwargs)))
             if self.async:
-                return FutureResult(self.status, key)
+                return FutureResult(self.status, func_id, self)
             else:
                 # block and wait for the status
-                while self.status[key]['status'] != 'done':
+                while self.status[func_id]['status'] != 'done':
                     pass
-                return self.status.pop(key)['ret']
+                self._update_cache(func_id, self.status[func_id]['ret'])
+                return self.status.pop(func_id)['ret']
         return _func
 
     """ with-statement wrapper """
@@ -158,9 +182,10 @@ class WorkerPool(object):
 
 
 if __name__ == "__main__":
+    import itertools
     import thread
     # 同步池子, 没什么优势 async = False
-    with WorkerPool(thread_num=5, async=False) as p:
+    with WorkerPool(thread_num=5, async=False, cache_result=True, cache_size=10) as p:
         @p.run_with
         def foo(a):
             import time
@@ -184,9 +209,10 @@ if __name__ == "__main__":
             print 'foo>', thread.get_ident(), '>', a
             return a
 
-        for i in xrange(10):
-            print foo(i)
+        results = [foo(i) for i in xrange(100)]
 
-        # cached ret
-        for i in xrange(10):
-            print foo(i)
+        while results:
+            for index, result in enumerate(results):
+                if result.ready():
+                    print result.result()
+                    results.remove(result)
