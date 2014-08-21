@@ -9,4 +9,4 @@ from simutils import template
 
 # template必须有后缀名, 配置template的位置
 t = template.render(loc=os.path.join(os.path.dirname(__file__), "templates"))
-print t.simple_template(name="John", xx=xrange(10))
+print str(t.simple_template(name="John", xx=xrange(10)))
