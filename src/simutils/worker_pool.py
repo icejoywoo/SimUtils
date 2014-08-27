@@ -55,6 +55,8 @@ class Worker(threading.Thread):
 
 
 class FutureResult(object):
+    """ 利用了Cpython的GIL特性, dict的操作是原子的
+    """
 
     def __init__(self, p_status, func_id, worker_pool):
         self._pool_status = p_status
