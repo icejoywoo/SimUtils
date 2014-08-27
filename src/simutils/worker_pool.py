@@ -150,18 +150,27 @@ class WorkerPool(object):
             :param kwargs: original method's kwargs
             :return:
             """
-            if self.cache_result:
-                # 相同参数的调用, 会出现相同的func_id, 这样才能缓存结果
-                func_id = (func.__name__, args, tuple(kwargs.items()))
-                cache_ret = self._get_cache(func_id)
-                if cache_ret:
-                    return cache_ret
-            else:
+            try:
+                if self.cache_result:
+                    # 相同参数的调用, 会出现相同的func_id, 这样才能缓存结果
+                    func_id = (func.__name__, args, tuple(kwargs.items()))
+                    cache_ret = self._get_cache(func_id)
+                    if cache_ret:
+                        return cache_ret
+                else:
+                    import time
+                    # 引入时间和counter, 不希望func_id出现重复
+                    func_id = (func.__name__, args, tuple(kwargs.items()), time.time(), self.counter)
+
+                self.status.setdefault(func_id, {'status': 'ready'})
+            except TypeError as e:
+                # TypeError: unhashable type args或kwargs可能存在可变类型, 会出现这个错误
                 import time
-                # 引入时间和counter, 不希望func_id出现重复
-                func_id = (func.__name__, args, tuple(kwargs.items()), time.time(), self.counter)
+                func_id = (func.__name__, time.time(), self.counter)
+                self.cache_result = False
+                self.status.setdefault(func_id, {'status': 'ready'})
+
             self.counter += 1
-            self.status.setdefault(func_id, {'status': 'ready'})
             self.queue.put((func_id, lambda: func(*args, **kwargs)))
             if self.async:
                 return FutureResult(self.status, func_id, self)
@@ -201,7 +210,7 @@ if __name__ == "__main__":
             print foo(i)
 
     # 异步池子
-    with WorkerPool(thread_num=5, async=True) as p:
+    with WorkerPool(thread_num=5, async=True, cache_result=True,) as p:
         @p.run_with
         def foo(a):
             import time
@@ -209,7 +218,7 @@ if __name__ == "__main__":
             print 'foo>', thread.get_ident(), '>', a
             return a
 
-        results = [foo(i) for i in xrange(100)]
+        results = [foo([1, 2, 3]) for i in xrange(100)]
 
         while results:
             for index, result in enumerate(results):
